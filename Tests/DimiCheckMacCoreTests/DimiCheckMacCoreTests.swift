@@ -1,4 +1,5 @@
-import DimiCheckMacCore
+import Foundation
+@testable import DimiCheckMacCore
 import Testing
 
 struct DimiCheckMacCoreTests {
@@ -59,5 +60,38 @@ struct DimiCheckMacCoreTests {
         #expect(VersionPolicy.state(currentVersion: "0.1.10", policy: policy) == .current)
         #expect(VersionPolicy.state(currentVersion: "0.1.3-beta", policy: policy) == .current)
         #expect(VersionPolicy.state(currentVersion: "0.1.3", policy: nil) == .unknown)
+    }
+
+    @Test
+    func serverErrorsDoNotExposeHTMLBodies() {
+        let cloudflareHTML = """
+        <!DOCTYPE html>
+        <html lang="en-US">
+        <head><title>dimicheck.com | 502: Bad gateway</title></head>
+        <body>Cloudflare Ray ID</body>
+        </html>
+        """
+
+        let message = DimiCheckAPI.serverMessage(statusCode: 502, data: Data(cloudflareHTML.utf8))
+
+        #expect(message == "DimiCheck 서버가 잠시 불안정합니다. 잠시 후 다시 시도해 주세요. (502)")
+        #expect(!message.contains("<html"))
+        #expect(!message.contains("Cloudflare"))
+    }
+
+    @Test
+    func jsonServerErrorsStillUseServerMessage() {
+        let payload = #"{"message":"상태를 찾을 수 없습니다."}"#
+
+        let message = DimiCheckAPI.serverMessage(statusCode: 404, data: Data(payload.utf8))
+
+        #expect(message == "상태를 찾을 수 없습니다.")
+    }
+
+    @Test
+    func transientServerErrorsDoNotClearStoredSession() {
+        #expect(!APIError.server(statusCode: 502, message: "bad gateway").shouldClearStoredSession)
+        #expect(!APIError.transport("offline").shouldClearStoredSession)
+        #expect(APIError.server(statusCode: 401, message: "unauthorized").shouldClearStoredSession)
     }
 }

@@ -26,6 +26,17 @@ public enum APIError: LocalizedError, Sendable {
             return message
         }
     }
+
+    public var shouldClearStoredSession: Bool {
+        switch self {
+        case .server(let statusCode, _):
+            return statusCode == 400 || statusCode == 401 || statusCode == 403
+        case .invalidCallback, .stateMismatch, .missingAuthorizationCode:
+            return true
+        case .invalidConfiguration, .invalidResponse, .transport:
+            return false
+        }
+    }
 }
 
 public struct DimiCheckAPI: Sendable {
@@ -166,7 +177,7 @@ public struct DimiCheckAPI: Sendable {
         }
 
         guard (200..<300).contains(httpResponse.statusCode) else {
-            let message = parseErrorMessage(from: data) ?? HTTPURLResponse.localizedString(forStatusCode: httpResponse.statusCode)
+            let message = Self.serverMessage(statusCode: httpResponse.statusCode, data: data)
             throw APIError.server(statusCode: httpResponse.statusCode, message: message)
         }
 
@@ -192,7 +203,26 @@ public struct DimiCheckAPI: Sendable {
         return value.addingPercentEncoding(withAllowedCharacters: allowed) ?? value
     }
 
-    private func parseErrorMessage(from data: Data) -> String? {
+    static func serverMessage(statusCode: Int, data: Data) -> String {
+        parseErrorMessage(from: data) ?? fallbackServerMessage(statusCode: statusCode)
+    }
+
+    private static func fallbackServerMessage(statusCode: Int) -> String {
+        switch statusCode {
+        case 502, 503, 504:
+            return "DimiCheck 서버가 잠시 불안정합니다. 잠시 후 다시 시도해 주세요. (\(statusCode))"
+        case 500...599:
+            return "서버 오류가 발생했습니다. 잠시 후 다시 시도해 주세요. (\(statusCode))"
+        case 401:
+            return "로그인이 만료되었습니다. 다시 로그인해 주세요."
+        case 403:
+            return "요청 권한이 없습니다. 브라우저에서 다시 확인해 주세요."
+        default:
+            return HTTPURLResponse.localizedString(forStatusCode: statusCode)
+        }
+    }
+
+    private static func parseErrorMessage(from data: Data) -> String? {
         struct ErrorEnvelope: Decodable {
             struct ErrorBody: Decodable {
                 let code: String?
@@ -212,7 +242,24 @@ public struct DimiCheckAPI: Sendable {
         if let decoded = try? JSONDecoder().decode(ErrorEnvelope.self, from: data) {
             return decoded.error?.message ?? decoded.message ?? decoded.errorDescription
         }
-        return String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let rawText = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !rawText.isEmpty,
+              !rawText.looksLikeHTML
+        else {
+            return nil
+        }
+        return rawText.count > 240 ? String(rawText.prefix(240)) : rawText
+    }
+}
+
+private extension String {
+    var looksLikeHTML: Bool {
+        let lowercasedText = lowercased()
+        return lowercasedText.hasPrefix("<!doctype html")
+            || lowercasedText.hasPrefix("<html")
+            || lowercasedText.contains("<body")
+            || lowercasedText.contains("<head")
+            || lowercasedText.contains("</html>")
     }
 }
 

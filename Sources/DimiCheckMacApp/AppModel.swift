@@ -118,7 +118,9 @@ final class AppModel: ObservableObject {
             }
             try await applyRefreshedSession(using: refreshToken)
         } catch {
-            keychain.delete()
+            if (error as? APIError)?.shouldClearStoredSession == true {
+                keychain.delete()
+            }
             accessToken = nil
             accessTokenExpiresAt = nil
             currentStatus = nil

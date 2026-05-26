@@ -1,6 +1,6 @@
 cask "dimicheck-mac" do
-  version "0.1.0"
-  sha256 "ba0381e04c63eb5944208adeb276f186fc75874cd418ef96f24e7c6eb8a1bd01"
+  version "0.1.1"
+  sha256 "afe640f7b6c2525f1bb88723c355e013d610829ea818c118c32124a5b0d92963"
 
   url "https://github.com/DimiCheck/Dimicheck-mac/releases/download/v#{version}/DimiCheck-Mac-#{version}.dmg",
       verified: "github.com/DimiCheck/Dimicheck-mac/"
