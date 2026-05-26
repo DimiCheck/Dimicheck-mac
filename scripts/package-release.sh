@@ -12,6 +12,8 @@ ZIP_PATH="$DIST_DIR/$ARCHIVE_NAME.zip"
 DMG_PATH="$DIST_DIR/$ARCHIVE_NAME.dmg"
 CHECKSUM_PATH="$DIST_DIR/SHA256SUMS"
 TMP_DIR="$(mktemp -d)"
+DMG_RW_PATH="$TMP_DIR/$ARCHIVE_NAME-rw.dmg"
+VOLUME_NAME="DimiCheck Mac $VERSION"
 
 cleanup() {
   rm -rf "$TMP_DIR"
@@ -26,12 +28,51 @@ ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" "$ZIP_PATH"
 mkdir -p "$TMP_DIR/dmg"
 ditto "$APP_PATH" "$TMP_DIR/dmg/DimiCheck Mac.app"
 ln -s /Applications "$TMP_DIR/dmg/Applications"
+mkdir -p "$TMP_DIR/dmg/.background"
+cp "$ROOT_DIR/Resources/DMGBackground.png" "$TMP_DIR/dmg/.background/DMGBackground.png"
+cp "$ROOT_DIR/Resources/AppIcon.icns" "$TMP_DIR/dmg/.VolumeIcon.icns"
+
 hdiutil create \
-  -volname "DimiCheck Mac $VERSION" \
+  -volname "$VOLUME_NAME" \
   -srcfolder "$TMP_DIR/dmg" \
   -ov \
-  -format UDZO \
-  "$DMG_PATH" >/dev/null
+  -format UDRW \
+  "$DMG_RW_PATH" >/dev/null
+
+MOUNT_DIR="$(hdiutil attach "$DMG_RW_PATH" -nobrowse -readwrite -noverify | awk 'index($0, "/Volumes/") {print substr($0, index($0, "/Volumes/")); exit}')"
+if [[ -z "$MOUNT_DIR" || ! -d "$MOUNT_DIR" ]]; then
+  echo "Failed to mount staging dmg" >&2
+  exit 1
+fi
+
+if command -v SetFile >/dev/null 2>&1; then
+  SetFile -a C "$MOUNT_DIR" || true
+fi
+
+osascript <<APPLESCRIPT
+tell application "Finder"
+  tell disk "$VOLUME_NAME"
+    open
+    set current view of container window to icon view
+    set toolbar visible of container window to false
+    set statusbar visible of container window to false
+    set the bounds of container window to {100, 100, 740, 500}
+    set viewOptions to the icon view options of container window
+    set arrangement of viewOptions to not arranged
+    set icon size of viewOptions to 96
+    set background picture of viewOptions to (POSIX file "$MOUNT_DIR/.background/DMGBackground.png" as alias)
+    set position of item "DimiCheck Mac.app" of container window to {160, 205}
+    set position of item "Applications" of container window to {480, 205}
+    update without registering applications
+    delay 1
+    close
+  end tell
+end tell
+APPLESCRIPT
+
+sync
+hdiutil detach "$MOUNT_DIR" >/dev/null
+hdiutil convert "$DMG_RW_PATH" -format UDZO -imagekey zlib-level=9 -o "$DMG_PATH" >/dev/null
 
 (
   cd "$DIST_DIR"
