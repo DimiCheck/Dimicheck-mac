@@ -63,7 +63,7 @@ title.draw(
     ]
 )
 
-let subtitle = "Drag to Applications" as NSString
+let subtitle = "응용 프로그램 폴더로 드래그해서 설치하세요" as NSString
 subtitle.draw(
     in: NSRect(x: 52, y: 286, width: 536, height: 24),
     withAttributes: [
@@ -84,7 +84,7 @@ arrowPath.lineCapStyle = .round
 arrowPath.lineJoinStyle = .round
 arrowPath.stroke()
 
-let footer = "If macOS blocks the beta, open System Settings > Privacy & Security and allow it." as NSString
+let footer = "macOS가 베타 앱을 막으면 시스템 설정 > 개인정보 보호 및 보안에서 허용하세요." as NSString
 footer.draw(
     in: NSRect(x: 52, y: 54, width: 536, height: 36),
     withAttributes: [
