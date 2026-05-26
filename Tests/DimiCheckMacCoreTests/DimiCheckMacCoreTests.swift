@@ -49,7 +49,7 @@ struct DimiCheckMacCoreTests {
             latestVersion: "0.1.3",
             minSupportedVersion: "0.1.2",
             downloadURL: "https://dimicheck.com/mac.html",
-            homebrewCommand: "brew upgrade --cask dimicheck/dimicheck-mac",
+            homebrewCommand: "brew upgrade --cask DimiCheck/dimicheck/dimicheck-mac",
             message: "업데이트"
         )
 

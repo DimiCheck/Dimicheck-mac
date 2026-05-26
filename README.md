@@ -17,7 +17,7 @@ Minimal macOS menu bar companion app for DimiCheck.
 Recommended:
 
 ```bash
-brew install --cask dimicheck/dimicheck-mac
+brew install --cask DimiCheck/dimicheck/dimicheck-mac
 ```
 
 Direct download users can install the `DimiCheck-Mac-<version>.dmg` from GitHub Releases.
@@ -72,5 +72,5 @@ The packaging script creates:
    - `MAC_APP_LATEST_VERSION=<version>`
    - `MAC_APP_MIN_SUPPORTED_VERSION=<minimum allowed version>`
    - `MAC_APP_DOWNLOAD_URL=https://dimicheck.com/mac.html`
-   - `MAC_APP_HOMEBREW_COMMAND=brew upgrade --cask dimicheck/dimicheck-mac`
+   - `MAC_APP_HOMEBREW_COMMAND=brew upgrade --cask DimiCheck/dimicheck/dimicheck-mac`
    - `MAC_APP_UPDATE_MESSAGE=<short update message>`
