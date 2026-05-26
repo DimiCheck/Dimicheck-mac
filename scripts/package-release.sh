@@ -20,6 +20,14 @@ cleanup() {
 }
 trap cleanup EXIT
 
+detach_conflicting_volumes() {
+  local volume_path
+  for volume_path in "/Volumes/$VOLUME_NAME" "/Volumes/$VOLUME_NAME "*; do
+    [[ -e "$volume_path" ]] || continue
+    hdiutil detach "$volume_path" >/dev/null 2>&1 || true
+  done
+}
+
 rm -rf "$DIST_DIR"
 mkdir -p "$DIST_DIR"
 
@@ -28,9 +36,6 @@ ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" "$ZIP_PATH"
 mkdir -p "$TMP_DIR/dmg"
 ditto "$APP_PATH" "$TMP_DIR/dmg/DimiCheck Mac.app"
 ln -s /Applications "$TMP_DIR/dmg/Applications"
-mkdir -p "$TMP_DIR/dmg/.background"
-cp "$ROOT_DIR/Resources/DMGBackground.png" "$TMP_DIR/dmg/.background/DMGBackground.png"
-cp "$ROOT_DIR/Resources/AppIcon.icns" "$TMP_DIR/dmg/.VolumeIcon.icns"
 
 hdiutil create \
   -volname "$VOLUME_NAME" \
@@ -39,6 +44,7 @@ hdiutil create \
   -format UDRW \
   "$DMG_RW_PATH" >/dev/null
 
+detach_conflicting_volumes
 MOUNT_DIR="$(hdiutil attach "$DMG_RW_PATH" -nobrowse -readwrite -noverify | awk 'index($0, "/Volumes/") {print substr($0, index($0, "/Volumes/")); exit}')"
 if [[ -z "$MOUNT_DIR" || ! -d "$MOUNT_DIR" ]]; then
   echo "Failed to mount staging dmg" >&2
@@ -60,16 +66,17 @@ tell application "Finder"
     set viewOptions to the icon view options of container window
     set arrangement of viewOptions to not arranged
     set icon size of viewOptions to 96
-    set background picture of viewOptions to (POSIX file "$MOUNT_DIR/.background/DMGBackground.png" as alias)
+    set background picture of viewOptions to (POSIX file "$MOUNT_DIR/DimiCheck Mac.app/Contents/Resources/DMGBackground.png" as alias)
     set position of item "DimiCheck Mac.app" of container window to {160, 205}
     set position of item "Applications" of container window to {480, 205}
     update without registering applications
-    delay 1
-    close
   end tell
+  delay 1
+  close container window of disk "$VOLUME_NAME"
 end tell
 APPLESCRIPT
 
+sync
 sync
 hdiutil detach "$MOUNT_DIR" >/dev/null
 hdiutil convert "$DMG_RW_PATH" -format UDZO -imagekey zlib-level=9 -o "$DMG_PATH" >/dev/null

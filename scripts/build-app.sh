@@ -15,6 +15,7 @@ mkdir -p "$APP_DIR/Contents/MacOS" "$APP_DIR/Contents/Resources"
 cp "$EXECUTABLE" "$APP_DIR/Contents/MacOS/DimiCheckMac"
 cp "$ROOT_DIR/Resources/Info.plist" "$APP_DIR/Contents/Info.plist"
 cp "$ROOT_DIR/Resources/AppIcon.icns" "$APP_DIR/Contents/Resources/AppIcon.icns"
+cp "$ROOT_DIR/Resources/DMGBackground.png" "$APP_DIR/Contents/Resources/DMGBackground.png"
 
 chmod +x "$APP_DIR/Contents/MacOS/DimiCheckMac"
 codesign --force --deep --sign - "$APP_DIR" >/dev/null
